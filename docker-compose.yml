@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - local_pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_USER=admin
+      - POSTGRES_DB=noti_db
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+      - 8081:80
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
+
+  web:
+    build: .
+    command: daphne -b 0.0.0.0 -p 8000 notification_project.asgi:application
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles  
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgres://admin:admin@postgres:5432/noti_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DJANGO_SECRET_KEY=J9X2AJJ6FquEs8LQOclmexgxuHI1FL2kYYz1XnZMvQ05dREtgxRUzMhUbwIPrXKidC0
+      - DJANGO_DEBUG=True
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+
+volumes:
+  local_pgdata:
+  pgadmin_data:
+  redis_data:
+  static_volume:  
