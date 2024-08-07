@@ -6,12 +6,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anlık Bildirim Uygulaması</title>
-    <link rel="stylesheet" href="{% static 'notificationapp/css/styles.css' %}">
+    <style>
+        /* CSS Kodları */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        #notifications-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #notifications-list li {
+            background-color: #f4f4f4;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
     <h1>Bildirimler</h1>
     <ul id="notifications-list"></ul>
 
-    <script src="{% static 'notificationapp/js/main.js' %}"></script>
+    <script>
+        // JavaScript Kodları
+        document.addEventListener("DOMContentLoaded", () => {
+            const notificationsList = document.getElementById("notifications-list");
+          
+            // REST API'den bildirimleri al
+            const fetchNotifications = async () => {
+              try {
+                const response = await fetch("/api/notifications/", {
+                  headers: {
+                    // Burada aldığınız token'ı ekleyin
+                    Authorization: "Token 1aaa850347d7c09bc2fa973c8318d06669b1c687",
+                  },
+                });
+          
+                if (!response.ok) {
+                  throw new Error("HTTP error " + response.status);
+                }
+          
+                const data = await response.json();
+                displayNotifications(data);
+              } catch (error) {
+                console.error("Error fetching notifications:", error);
+              }
+            };
+          
+            // Bildirimleri listeleme fonksiyonu
+            const displayNotifications = (notifications) => {
+              notifications.forEach((notification) => {
+                const li = document.createElement("li");
+                li.textContent = notification.message;
+                notificationsList.appendChild(li);
+              });
+            };
+          
+            // WebSocket bağlantısı kur
+            const setupWebSocket = () => {
+              const socket = new WebSocket("ws://localhost:8000/ws/notifications/");
+          
+              // WebSocket açıldığında çalışır
+              socket.onopen = () => {
+                console.log("WebSocket connection established");
+              };
+          
+              // WebSocket'ten mesaj alındığında çalışır
+              socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const li = document.createElement("li");
+                li.textContent = data.message;
+                notificationsList.appendChild(li);
+              };
+          
+              // WebSocket kapanırsa yeniden bağlanmayı dener
+              socket.onclose = () => {
+                console.log("WebSocket connection closed, retrying...");
+                setTimeout(setupWebSocket, 3000); // 3 saniye sonra yeniden bağlan
+              };
+          
+              // WebSocket hata aldığında çalışır
+              socket.onerror = (error) => {
+                console.error("WebSocket error:", error);
+              };
+            };
+          
+            // Bildirimleri fetch ederek ve WebSocket kurarak başlat
+            fetchNotifications();
+            setupWebSocket();
+          });
+    </script>
 </body>
 </html>
