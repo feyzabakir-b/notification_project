@@ -9,25 +9,82 @@
     <style>
         /* CSS Kodları */
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
             margin: 0;
             padding: 20px;
         }
 
         h1 {
-            color: #333;
+            color: #4a4a4a;
+            text-align: center;
         }
 
         #notifications-list {
             list-style-type: none;
             padding: 0;
+            max-width: 600px;
+            margin: 20px auto;
         }
 
         #notifications-list li {
-            background-color: #f4f4f4;
-            padding: 10px;
-            margin-bottom: 5px;
-            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: fadeIn 0.5s ease-in-out;
+            color: #fff;
+        }
+
+        .color1 {
+            background-color: #FF6347; /* Koyu kırmızı */
+        }
+
+        .color2 {
+            background-color: #FF8C00; /* Koyu turuncu */
+        }
+
+        .color3 {
+            background-color: #32CD32; /* Koyu yeşil */
+        }
+
+        .color4 {
+            background-color: #1E90FF; /* Koyu mavi */
+        }
+
+        .color5 {
+            background-color: #9370DB; /* Koyu mor */
+        }
+
+        #notifications-list li .message {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        #notifications-list li .close-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.2em;
+            cursor: pointer;
+        }
+
+        #notifications-list li .close-btn:hover {
+            color: #ccc;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
@@ -36,73 +93,75 @@
     <ul id="notifications-list"></ul>
 
     <script>
-        // JavaScript Kodları
         document.addEventListener("DOMContentLoaded", () => {
             const notificationsList = document.getElementById("notifications-list");
-          
-            // REST API'den bildirimleri al
+            const colors = ['color1', 'color2', 'color3', 'color4', 'color5'];
+            let colorIndex = 0;
+
             const fetchNotifications = async () => {
-              try {
-                const response = await fetch("/api/notifications/", {
-                  headers: {
-                    // Burada aldığınız token'ı ekleyin
-                    Authorization: "Token 1aaa850347d7c09bc2fa973c8318d06669b1c687",
-                  },
-                });
-          
-                if (!response.ok) {
-                  throw new Error("HTTP error " + response.status);
+                try {
+                    const response = await fetch("/api/notifications/", {
+                        headers: {
+                            Authorization: "Token 1aaa850347d7c09bc2fa973c8318d06669b1c687",
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("HTTP error " + response.status);
+                    }
+
+                    const data = await response.json();
+                    displayNotifications(data.reverse());  
+                } catch (error) {
+                    console.error("Error fetching notifications:", error);
                 }
-          
-                const data = await response.json();
-                displayNotifications(data);
-              } catch (error) {
-                console.error("Error fetching notifications:", error);
-              }
             };
-          
-            // Bildirimleri listeleme fonksiyonu
+
             const displayNotifications = (notifications) => {
-              notifications.forEach((notification) => {
-                const li = document.createElement("li");
-                li.textContent = notification.message;
-                notificationsList.appendChild(li);
-              });
+                notifications.forEach((notification) => {
+                    addNotificationToDOM(notification.message);
+                });
             };
-          
-            // WebSocket bağlantısı kur
+
             const setupWebSocket = () => {
-              const socket = new WebSocket("ws://localhost:8000/ws/notifications/");
-          
-              // WebSocket açıldığında çalışır
-              socket.onopen = () => {
-                console.log("WebSocket connection established");
-              };
-          
-              // WebSocket'ten mesaj alındığında çalışır
-              socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                const li = document.createElement("li");
-                li.textContent = data.message;
-                notificationsList.appendChild(li);
-              };
-          
-              // WebSocket kapanırsa yeniden bağlanmayı dener
-              socket.onclose = () => {
-                console.log("WebSocket connection closed, retrying...");
-                setTimeout(setupWebSocket, 3000); // 3 saniye sonra yeniden bağlan
-              };
-          
-              // WebSocket hata aldığında çalışır
-              socket.onerror = (error) => {
-                console.error("WebSocket error:", error);
-              };
+                const socket = new WebSocket("ws://localhost:8000/ws/notifications/");
+
+                socket.onopen = () => {
+                    console.log("WebSocket connection established");
+                };
+
+                socket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    addNotificationToDOM(data.message);
+                };
+
+                socket.onclose = () => {
+                    console.log("WebSocket connection closed, retrying...");
+                    setTimeout(setupWebSocket, 3000); // 3 saniye sonra yeniden bağlan
+                };
+
+                socket.onerror = (error) => {
+                    console.error("WebSocket error:", error);
+                };
             };
-          
-            // Bildirimleri fetch ederek ve WebSocket kurarak başlat
+            const addNotificationToDOM = (message) => {
+                const li = document.createElement("li");
+                li.className = colors[colorIndex]; 
+                li.innerHTML = `
+                    <span class="message">${message}</span>
+                    <button class="close-btn">&times;</button>
+                `;
+                notificationsList.insertBefore(li, notificationsList.firstChild);
+                colorIndex = (colorIndex + 1) % colors.length; 
+
+                li.querySelector(".close-btn").addEventListener("click", () => {
+                    li.remove();
+                });
+            };
+
             fetchNotifications();
             setupWebSocket();
-          });
+        });
     </script>
 </body>
 </html>
